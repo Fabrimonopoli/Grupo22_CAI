@@ -1,0 +1,12 @@
+# .gitignore para .NET
+[Bb]in/
+[Oo]bj/
+[Tt]emp/
+[Ll]oggit /
+.idea/
+.vs/
+*.user
+app.db
+*.pdb
+logs/
+*.log
