@@ -1,4 +1,5 @@
-﻿using MiniApi.Extensions.Endpoints;
+﻿using MiniApi.Endpoints;
+using MiniApi.Extensions.Endpoints;
 using MiniApi.Models;
 
 namespace MiniApi.Extensions;
@@ -10,5 +11,6 @@ public static class EndpointsExtensions
     {
         // ALUMNOS: se agregan  
         app.MapItemEndpoints();
+        app.MapProductsEndpoints();
     }
 }
