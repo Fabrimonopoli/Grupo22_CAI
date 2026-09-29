@@ -35,6 +35,19 @@ namespace MiniApi.Data
             );
         """);
 
+            // Creación de la tabla Producto
+            connection.Execute("""
+            CREATE TABLE IF NOT EXISTS Products (
+            Id TEXT PRIMARY KEY,
+            Nombre TEXT NOT NULL,
+            Descripcion TEXT,
+            Precio REAL NOT NULL,
+            Stock INTEGER NOT NULL,
+            Categoria TEXT NOT NULL,
+            FechaCreacion TEXT NOT NULL
+            );
+        """);
+
 
 
             _logger.LogInformation("SQLite inicializado correctamente → {db}", connectionString);
