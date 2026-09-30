@@ -35,6 +35,14 @@ namespace MiniApi.Endpoints
                 if (string.IsNullOrWhiteSpace(request.Nombre) || request.Precio <= 0 || request.Stock < 0)
                     throw new BusinessRuleException("PRD-002", "Los datos del producto son inválidos.");
 
+                // Validación de nombre duplicado (PRD-003)
+                var productosExistentes = await repo.GetAllAsync(request.Categoria, request.Nombre);
+                if (productosExistentes.Any(p => p.Nombre.Equals(request.Nombre, StringComparison.OrdinalIgnoreCase)))
+                {
+                  
+                    throw new BusinessRuleException("PRD-003", $"Ya existe un producto con el nombre '{request.Nombre}' en la categoría '{request.Categoria}'.");
+                }
+
                 var newProduct = new Product
                 {
                     Id = Guid.NewGuid(),
