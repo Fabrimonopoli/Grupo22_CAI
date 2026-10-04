@@ -1,27 +1,47 @@
-﻿using MiniApi.Data;
-using MiniApi.HealthChecks;
+﻿using System.Reflection;
+using Dapper;
+using Products.API.Data;
+using Products.API.ExceptionHandlers;
+using Products.API.HealthChecks;
 
-namespace MiniApi.Extensions
+namespace Products.API.Extensions;
+
+public static class ServicesExtensions
 {
-    public static class ServicesExtensions
+    public static void AddAppServices(this IServiceCollection services)
     {
-        public static void AddAppServices(this IServiceCollection services)
+        SqlMapper.AddTypeHandler(new SqliteGuidTypeHandler());
+
+        services.AddSingleton<DatabaseInitializer>();
+        services.AddScoped<ProductRepository>();
+
+        services.AddExceptionHandler<NotFoundExceptionHandler>();
+        services.AddExceptionHandler<BusinessRuleExceptionHandler>();
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+        services.AddProblemDetails();
+
+        services.AddEndpointsApiExplorer();
+
+        services.AddSwaggerGen(options =>
         {
-            services.AddSingleton<DatabaseInitializer>();
-            services.AddScoped<ItemRepository>();
-            services.AddScoped<ProductRepository>();
-            services.AddEndpointsApiExplorer();
-            services.AddSwaggerGen();
+            options.OperationFilter<ProductOpenApiFilter>();
 
-            services.AddHealthChecks()
-                .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["database"])
-                .AddCheck<ApiStatusCheck>("api-status", tags: ["api"]);
-
-            services.AddHealthChecksUI(setup =>
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            if (File.Exists(xmlPath))
             {
-                setup.SetEvaluationTimeInSeconds(600);
-                setup.AddHealthCheckEndpoint("MiApi", "/health");
-            }).AddInMemoryStorage();
-        }
+                options.IncludeXmlComments(xmlPath);
+            }
+        });
+
+        services.AddHealthChecks()
+            .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["database"])
+            .AddCheck<ApiStatusCheck>("api-status", tags: ["api"]);
+
+        services.AddHealthChecksUI(setup =>
+        {
+            setup.SetEvaluationTimeInSeconds(600);
+            setup.AddHealthCheckEndpoint("ProductsAPI", "/health");
+        }).AddInMemoryStorage();
     }
 }
