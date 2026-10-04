@@ -1,72 +1,78 @@
 ﻿using Dapper;
 using Microsoft.Data.Sqlite;
-using MiniApi.Models;
+using Products.API.Models;
 
-namespace MiniApi.Data
+namespace Products.API.Data;
+
+public class ProductRepository
 {
-    public class ProductRepository
+    private readonly IConfiguration _config;
+    public ProductRepository(IConfiguration config) => _config = config;
+
+    private SqliteConnection CreateConnection() =>
+        new(_config.GetConnectionString("DefaultConnection") ?? "Data Source=products.db;Foreign Keys=True;");
+
+    public async Task<IEnumerable<Product>> GetAllAsync(string? categoria = null, string? nombre = null)
     {
-        private readonly string _connectionString;
+        using var conn = CreateConnection();
+        var sql = @"
+            SELECT Id, Nombre, Descripcion, Precio, Stock, Categoria, FechaCreacion
+            FROM Product
+            WHERE (@categoria IS NULL OR LOWER(Categoria) = LOWER(@categoria))
+              AND (@nombre IS NULL OR LOWER(Nombre) LIKE '%' || LOWER(@nombre) || '%')
+            ORDER BY FechaCreacion DESC";
+        return await conn.QueryAsync<Product>(sql, new { categoria, nombre });
+    }
 
-        public ProductRepository(IConfiguration config)
+    public async Task<Product?> GetByIdAsync(Guid id)
+    {
+        using var conn = CreateConnection();
+        var sql = "SELECT Id, Nombre, Descripcion, Precio, Stock, Categoria, FechaCreacion FROM Product WHERE Id = @id";
+        return await conn.QuerySingleOrDefaultAsync<Product>(sql, new { id = id.ToString() });
+    }
+
+    public async Task<Product?> GetByNameAndCategoryAsync(string nombre, string categoria)
+    {
+        using var conn = CreateConnection();
+        var sql = "SELECT Id, Nombre, Descripcion, Precio, Stock, Categoria, FechaCreacion FROM Product WHERE LOWER(Nombre) = LOWER(@nombre) AND LOWER(Categoria) = LOWER(@categoria)";
+        return await conn.QuerySingleOrDefaultAsync<Product>(sql, new { nombre, categoria });
+    }
+
+    public async Task CreateAsync(Product product)
+    {
+        using var conn = CreateConnection();
+        var sql = "INSERT INTO Product (Id, Nombre, Descripcion, Precio, Stock, Categoria, FechaCreacion) VALUES (@Id, @Nombre, @Descripcion, @Precio, @Stock, @Categoria, @FechaCreacion)";
+        await conn.ExecuteAsync(sql, new
         {
-            _connectionString = config.GetConnectionString("DefaultConnection") ?? "Data Source=app.db";
-        }
+            Id = product.Id.ToString(),
+            product.Nombre,
+            product.Descripcion,
+            product.Precio,
+            product.Stock,
+            product.Categoria,
+            FechaCreacion = product.FechaCreacion.ToString("O")
+        });
+    }
 
-        public async Task<IEnumerable<Product>> GetAllAsync(string? categoria, string? nombre)
-        {
-            using var connection = new SqliteConnection(_connectionString);
-            var sql = @"SELECT * FROM Products 
-                        WHERE (@Categoria IS NULL OR Categoria = @Categoria) 
-                        AND (@Nombre IS NULL OR Nombre LIKE '%' || @Nombre || '%')";
-            return await connection.QueryAsync<Product>(sql, new { Categoria = categoria, Nombre = nombre });
-        }
+    public async Task<bool> UpdateAsync(Product product)
+    {
+        using var conn = CreateConnection();
+        var sql = "UPDATE Product SET Nombre = @Nombre, Descripcion = @Descripcion, Precio = @Precio, Stock = @Stock, Categoria = @Categoria WHERE Id = @Id";
+        var rows = await conn.ExecuteAsync(sql, new { Id = product.Id.ToString(), product.Nombre, product.Descripcion, product.Precio, product.Stock, product.Categoria });
+        return rows > 0;
+    }
 
-        public async Task<Product?> GetByIdAsync(Guid id)
-        {
-            using var connection = new SqliteConnection(_connectionString);
-            return await connection.QuerySingleOrDefaultAsync<Product>("SELECT * FROM Products WHERE Id = @Id", new { Id = id.ToString().ToUpper() });
-        }
+    public async Task<bool> DeleteAsync(Guid id)
+    {
+        using var conn = CreateConnection();
+        var sql = "DELETE FROM Product WHERE Id = @id";
+        var rows = await conn.ExecuteAsync(sql, new { id = id.ToString() });
+        return rows > 0;
+    }
 
-        public async Task CreateAsync(Product product)
-        {
-            using var connection = new SqliteConnection(_connectionString);
-            var sql = @"INSERT INTO Products (Id, Nombre, Descripcion, Precio, Stock, Categoria, FechaCreacion) 
-                        VALUES (@Id, @Nombre, @Descripcion, @Precio, @Stock, @Categoria, @FechaCreacion)";
-            await connection.ExecuteAsync(sql, product);
-        }
-
-        /* public async Task UpdateAsync(Product product)
-         {
-             using var connection = new SqliteConnection(_connectionString);
-             var sql = @"UPDATE Products SET Nombre = @Nombre, Descripcion = @Descripcion, Precio = @Precio, 
-                         Stock = @Stock, Categoria = @Categoria WHERE Id = @Id";
-             await connection.ExecuteAsync(sql, product);
-         }*/
-        public async Task UpdateAsync(Product product)
-        {
-            using var connection = new SqliteConnection(_connectionString);
-            var sql = @"UPDATE Products SET Nombre = @Nombre, Descripcion = @Descripcion, Precio = @Precio,
-                Stock = @Stock, Categoria = @Categoria WHERE Id = @Id";
-
-            // Desarmamos el objeto para obligar al Id a viajar en mayúsculas
-            await connection.ExecuteAsync(sql, new
-            {
-                Id = product.Id.ToString().ToUpper(),
-                Nombre = product.Nombre,
-                Descripcion = product.Descripcion,
-                Precio = product.Precio,
-                Stock = product.Stock,
-                Categoria = product.Categoria
-            });
-        }
-
-        public async Task DeleteAsync(Guid id)
-        {
-            using var connection = new SqliteConnection(_connectionString);
-
-            // Le agregamos el .ToUpper() al parámetro
-            await connection.ExecuteAsync("DELETE FROM Products WHERE Id = @Id", new { Id = id.ToString().ToUpper() });
-        }
+    public async Task<bool> HasActiveOrdersAsync(Guid productId)
+    {
+        await Task.CompletedTask;
+        return false;
     }
 }
