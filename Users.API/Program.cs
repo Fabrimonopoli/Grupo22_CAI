@@ -1,23 +1,18 @@
+using Users.API.Data;
+using Users.API.Extensions;
+
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.AddAppLogging();
+builder.Services.AddAppServices();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    app.MapOpenApi();
+    var dbInitializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
+    dbInitializer.Initialize();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
+app.UseAppMiddleware();
+app.MapAppEndpoints();
 app.Run();
