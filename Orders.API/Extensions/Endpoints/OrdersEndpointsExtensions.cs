@@ -137,5 +137,14 @@ public static class OrdersEndpointsExtensions
 
             return Results.Ok(response);
         }).WithTags("Orders");
+
+        // ── GET /api/orders/active-for-product/{productId} (Consulta interna para Products.API) ──
+        app.MapGet("/api/orders/active-for-product/{productId:guid}", async (Guid productId, OrderRepository repo) =>
+        {
+            var hasActiveOrders = await repo.HasActiveOrdersForProductAsync(productId);
+            return Results.Ok(new { hasActiveOrders });
+        })
+        .WithTags("Orders")
+        .ExcludeFromDescription(); // Ocultar este endpoint de Swagger
     }
 }
