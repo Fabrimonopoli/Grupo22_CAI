@@ -90,4 +90,17 @@ public class OrderRepository
         var rows = await conn.ExecuteAsync(@"UPDATE ""Order"" SET Estado = @estado WHERE Id = @id", new { estado, id = id.ToString() });
         return rows > 0;
     }
+    public async Task<bool> HasActiveOrdersForProductAsync(Guid productId)
+    {
+        using var conn = CreateConnection();
+        var sql = @"
+            SELECT COUNT(1) 
+            FROM ""Order"" o
+            INNER JOIN OrderItem oi ON o.Id = oi.OrderId
+            WHERE oi.ProductoId = @productId 
+              AND o.Estado IN ('Pendiente', 'Confirmada')
+        ";
+        var count = await conn.ExecuteScalarAsync<int>(sql, new { productId = productId.ToString() });
+        return count > 0;
+    }
 }

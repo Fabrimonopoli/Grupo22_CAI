@@ -67,6 +67,7 @@ public static class UsersEndpointsExtensions
             if (user is null) return Results.NotFound();
 
             return Results.Ok(new { user.Id, user.Nombre, user.Apellido, user.Email, user.Activo });
-        }).WithTags("Users");
+        }).WithTags("Users")
+        .ExcludeFromDescription(); // Ocultar este endpoint de Swagger
     }
 }
