@@ -7,12 +7,15 @@ namespace Cart.API.Extensions
     {
         public static void AddAppServices(this IServiceCollection services, IConfiguration config)
         {
+                
+            services.AddHttpContextAccessor();
+            services.AddTransient<CorrelationIdHandler>();
             // 1. Enchufamos al Mensajero HTTP 
             var productsApiUrl = config["Services:ProductsApiUrl"] ?? "http://localhost:5110";
             services.AddHttpClient<ProductsApiClient>(client =>
             {
                 client.BaseAddress = new Uri(productsApiUrl);
-            });
+            }).AddHttpMessageHandler<CorrelationIdHandler>();
 
             // 2. Preparamos el terreno para la Base de Datos (La parte de tu compañero)
             // TODO: Acá tu compañero va a registrar el DatabaseInitializer y su CartRepository
