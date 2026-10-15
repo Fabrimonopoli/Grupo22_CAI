@@ -4,7 +4,7 @@ using Products.API.Extensions;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddAppLogging();
-builder.Services.AddAppServices();
+builder.Services.AddAppServices(builder.Configuration);
 
 var app = builder.Build();
 
