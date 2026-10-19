@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Cart.API/Cart.API.csproj" Id="85fad3b3-7b95-4a8d-99a5-9a584843bac1" />
   <Project Path="Notifications.API/Notifications.API.csproj" />
   <Project Path="Orders.API/Orders.API.csproj" Id="6bba85fe-568a-49a7-bd6b-d63e5def9135" />
   <Project Path="Products.API/Products.API.csproj" />
