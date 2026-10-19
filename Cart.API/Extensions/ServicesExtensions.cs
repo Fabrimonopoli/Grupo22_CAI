@@ -22,7 +22,10 @@ namespace Cart.API.Extensions
 
             // 3. Documentación base (Swagger)
             services.AddEndpointsApiExplorer();
-            services.AddSwaggerGen();
+            services.AddSwaggerGen(options =>
+            {
+                options.OperationFilter<CartOpenApiFilter>();
+            });
 
             // 4. Enchufamos los Sensores de Salud
             services.AddHealthChecks()
