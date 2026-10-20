@@ -1,4 +1,5 @@
 ﻿using Cart.API.Clients;
+using Cart.API.Data;
 using Cart.API.HealthChecks;
 
 namespace Cart.API.Extensions
@@ -18,7 +19,9 @@ namespace Cart.API.Extensions
             }).AddHttpMessageHandler<CorrelationIdHandler>();
 
             // 2. Preparamos el terreno para la Base de Datos (La parte de tu compañero)
-            // TODO: Acá tu compañero va a registrar el DatabaseInitializer y su CartRepository
+            services.AddSingleton<DatabaseInitializer>();
+            services.AddScoped<CartRepository>();
+            services.AddProblemDetails();
 
             // 3. Documentación base (Swagger)
             services.AddEndpointsApiExplorer();
