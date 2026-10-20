@@ -51,6 +51,67 @@ public class CartRepository
             });
     }
 
+    public async Task<bool> CartExistsAsync(Guid userId)
+    {
+        await using var connection = CreateConnection();
+        await connection.OpenAsync();
+
+        var count = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(1) FROM CartItems WHERE UserId = @UserId;",
+            new { UserId = userId.ToString() });
+
+        return count > 0;
+    }
+
+    public async Task<bool> ItemExistsAsync(Guid userId, Guid productId)
+    {
+        await using var connection = CreateConnection();
+        await connection.OpenAsync();
+
+        var count = await connection.ExecuteScalarAsync<int>("""
+            SELECT COUNT(1)
+            FROM CartItems
+            WHERE UserId = @UserId AND ProductId = @ProductId;
+            """,
+            new
+            {
+                UserId = userId.ToString(),
+                ProductId = productId.ToString()
+            });
+
+        return count > 0;
+    }
+
+    public async Task<bool> RemoveItemAsync(Guid userId, Guid productId)
+    {
+        await using var connection = CreateConnection();
+        await connection.OpenAsync();
+
+        var rows = await connection.ExecuteAsync("""
+            DELETE FROM CartItems
+            WHERE UserId = @UserId AND ProductId = @ProductId;
+            """,
+            new
+            {
+                UserId = userId.ToString(),
+                ProductId = productId.ToString()
+            });
+
+        return rows > 0;
+    }
+
+    public async Task<bool> ClearCartAsync(Guid userId)
+    {
+        await using var connection = CreateConnection();
+        await connection.OpenAsync();
+
+        var rows = await connection.ExecuteAsync(
+            "DELETE FROM CartItems WHERE UserId = @UserId;",
+            new { UserId = userId.ToString() });
+
+        return rows > 0;
+    }
+
     public async Task<CartModel> GetCartAsync(Guid userId)
     {
         await using var connection = CreateConnection();
@@ -65,6 +126,8 @@ public class CartRepository
 
         return new CartModel
         {
+            UsuarioId = userId,
+            FechaActualizacion = DateTime.UtcNow,
             Items = items.AsList()
         };
     }
