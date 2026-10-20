@@ -1,4 +1,8 @@
 ﻿using Cart.API.Clients;
+using Cart.API.Data;
+using Cart.API.DTOs;
+using Cart.API.Exceptions;
+using Cart.API.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cart.API.Extensions.Endpoints
