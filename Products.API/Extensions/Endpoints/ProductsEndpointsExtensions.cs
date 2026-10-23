@@ -1,4 +1,5 @@
-﻿using Products.API.Data;
+﻿using Products.API.Clients;
+using Products.API.Data;
 using Products.API.DTOs;
 using Products.API.Exceptions;
 using Products.API.Models;
@@ -9,28 +10,39 @@ public static class ProductsEndpointsExtensions
 {
     public static void MapProductEndpoints(this WebApplication app)
     {
+        // ── GET /api/products (Listar productos con filtros opcionales) ──────────
         app.MapGet("/api/products", async (string? categoria, string? nombre, ProductRepository repo) =>
         {
             var products = await repo.GetAllAsync(categoria, nombre);
             return Results.Ok(products);
-        }).WithTags("Products");
+        })
+        .WithTags("Products");
 
+        // ── GET /api/products/{id} (Obtener detalle de producto) ────────────────
         app.MapGet("/api/products/{id:guid}", async (Guid id, ProductRepository repo) =>
         {
             var product = await repo.GetByIdAsync(id);
             if (product is null)
+            {
                 throw new NotFoundException(ProductErrorCodes.Prd001, "Producto no encontrado.");
+            }
             return Results.Ok(product);
-        }).WithTags("Products");
+        })
+        .WithTags("Products");
 
+        // ── POST /api/products (Crear nuevo producto) ──────────────────────────
         app.MapPost("/api/products", async (CreateProductRequest req, ProductRepository repo) =>
         {
             if (string.IsNullOrWhiteSpace(req.Nombre) || string.IsNullOrWhiteSpace(req.Categoria) || req.Precio <= 0 || req.Stock < 0)
+            {
                 throw new BusinessRuleException(ProductErrorCodes.Prd002, "Los datos del producto son inválidos.");
+            }
 
             var duplicate = await repo.GetByNameAndCategoryAsync(req.Nombre, req.Categoria);
             if (duplicate is not null)
+            {
                 throw new BusinessRuleException(ProductErrorCodes.Prd003, $"Ya existe un producto con ese nombre en la categoría '{req.Categoria}'.");
+            }
 
             var product = new Product
             {
@@ -44,20 +56,28 @@ public static class ProductsEndpointsExtensions
 
             await repo.CreateAsync(product);
             return Results.Created($"/api/products/{product.Id}", product);
-        }).WithTags("Products");
+        })
+        .WithTags("Products");
 
+        // ── PUT /api/products/{id} (Actualizar producto) ────────────────────────
         app.MapPut("/api/products/{id:guid}", async (Guid id, UpdateProductRequest req, ProductRepository repo) =>
         {
             var product = await repo.GetByIdAsync(id);
             if (product is null)
+            {
                 throw new NotFoundException(ProductErrorCodes.Prd001, "Producto no encontrado.");
+            }
 
             if (string.IsNullOrWhiteSpace(req.Nombre) || string.IsNullOrWhiteSpace(req.Categoria) || req.Precio <= 0 || req.Stock < 0)
+            {
                 throw new BusinessRuleException(ProductErrorCodes.Prd002, "Los datos del producto son inválidos.");
+            }
 
             var duplicate = await repo.GetByNameAndCategoryAsync(req.Nombre, req.Categoria);
             if (duplicate is not null && duplicate.Id != id)
+            {
                 throw new BusinessRuleException(ProductErrorCodes.Prd003, $"Ya existe un producto con ese nombre en la categoría '{req.Categoria}'.");
+            }
 
             product.Nombre = req.Nombre;
             product.Descripcion = req.Descripcion;
@@ -67,20 +87,28 @@ public static class ProductsEndpointsExtensions
 
             await repo.UpdateAsync(product);
             return Results.Ok(product);
-        }).WithTags("Products");
+        })
+        .WithTags("Products");
 
-        app.MapDelete("/api/products/{id:guid}", async (Guid id, ProductRepository repo) =>
+        // ── DELETE /api/products/{id} (Eliminar producto validando órdenes activas) ─
+        app.MapDelete("/api/products/{id:guid}", async (Guid id, ProductRepository repo, OrdersApiClient ordersClient) =>
         {
             var product = await repo.GetByIdAsync(id);
             if (product is null)
+            {
                 throw new NotFoundException(ProductErrorCodes.Prd001, "Producto no encontrado.");
+            }
 
-            var hasActiveOrders = await repo.HasActiveOrdersAsync(id);
+            // Consulta sincrónica a Orders.API para verificar órdenes activas (PRD-004)
+            var hasActiveOrders = await ordersClient.HasActiveOrdersAsync(id);
             if (hasActiveOrders)
+            {
                 throw new BusinessRuleException(ProductErrorCodes.Prd004, "El producto tiene órdenes activas y no puede eliminarse.");
+            }
 
             await repo.DeleteAsync(id);
             return Results.NoContent();
-        }).WithTags("Products");
+        })
+        .WithTags("Products");
     }
 }

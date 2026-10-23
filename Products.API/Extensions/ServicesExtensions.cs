@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Dapper;
+using Products.API.Clients;
 using Products.API.Data;
 using Products.API.ExceptionHandlers;
 using Products.API.HealthChecks;
@@ -8,12 +9,21 @@ namespace Products.API.Extensions;
 
 public static class ServicesExtensions
 {
-    public static void AddAppServices(this IServiceCollection services)
+    public static void AddAppServices(this IServiceCollection services, IConfiguration config)
     {
         SqlMapper.AddTypeHandler(new SqliteGuidTypeHandler());
 
         services.AddSingleton<DatabaseInitializer>();
         services.AddScoped<ProductRepository>();
+
+        services.AddHttpContextAccessor();
+        services.AddTransient<CorrelationIdHandler>();
+
+        var ordersApiUrl = config["Services:OrdersApiUrl"] ?? "http://localhost:5114";
+        services.AddHttpClient<OrdersApiClient>(client =>
+        {
+            client.BaseAddress = new Uri(ordersApiUrl);
+        }).AddHttpMessageHandler<CorrelationIdHandler>();
 
         services.AddExceptionHandler<NotFoundExceptionHandler>();
         services.AddExceptionHandler<BusinessRuleExceptionHandler>();
