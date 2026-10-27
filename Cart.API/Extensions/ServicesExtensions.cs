@@ -1,5 +1,8 @@
 ﻿using Cart.API.Clients;
+using Cart.API.Data;
+using Cart.API.ExceptionHandlers;
 using Cart.API.HealthChecks;
+using Dapper;
 
 namespace Cart.API.Extensions
 {
@@ -7,6 +10,7 @@ namespace Cart.API.Extensions
     {
         public static void AddAppServices(this IServiceCollection services, IConfiguration config)
         {
+            SqlMapper.AddTypeHandler(new SqliteGuidTypeHandler());
                 
             services.AddHttpContextAccessor();
             services.AddTransient<CorrelationIdHandler>();
@@ -18,7 +22,12 @@ namespace Cart.API.Extensions
             }).AddHttpMessageHandler<CorrelationIdHandler>();
 
             // 2. Preparamos el terreno para la Base de Datos (La parte de tu compañero)
-            // TODO: Acá tu compañero va a registrar el DatabaseInitializer y su CartRepository
+            services.AddSingleton<DatabaseInitializer>();
+            services.AddScoped<CartRepository>();
+            services.AddProblemDetails();
+            services.AddExceptionHandler<NotFoundExceptionHandler>();
+            services.AddExceptionHandler<BusinessRuleExceptionHandler>();
+            services.AddExceptionHandler<GlobalExceptionHandler>();
 
             // 3. Documentación base (Swagger)
             services.AddEndpointsApiExplorer();

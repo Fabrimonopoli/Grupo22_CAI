@@ -1,4 +1,8 @@
 ﻿using Cart.API.Clients;
+using Cart.API.Data;
+using Cart.API.DTOs;
+using Cart.API.Exceptions;
+using Cart.API.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cart.API.Extensions.Endpoints
@@ -7,6 +11,16 @@ namespace Cart.API.Extensions.Endpoints
     {
         public static void MapCartEndpoints(this WebApplication app)
         {
+            app.MapGet("/api/cart/{userId}", async (
+                Guid userId,
+                CartRepository repo) =>
+            {
+                if (!await repo.CartExistsAsync(userId))
+                    throw new NotFoundException("CRT-001", "Carrito no encontrado.");
+
+                return Results.Ok(await repo.GetCartAsync(userId));
+            }).WithTags("Cart");
+
             // ========================================================
             // ENDPOINT 1: Agregar producto al carrito (POST)
             // ========================================================
@@ -23,7 +37,7 @@ namespace Cart.API.Extensions.Endpoints
                 var product = await productsClient.GetProductAsync(req.ProductoId);
 
                 if (product == null)
-                    throw new BusinessRuleException("CRT-002", "Producto no encontrado en el inventario.");
+                    throw new NotFoundException("CRT-002", "Producto no encontrado.");
 
                 if (product.Stock < req.Cantidad)
                     throw new BusinessRuleException("CRT-003", $"Stock insuficiente. Disponible: {product.Stock}, solicitado: {req.Cantidad}.");
@@ -54,16 +68,47 @@ namespace Cart.API.Extensions.Endpoints
                 var product = await productsClient.GetProductAsync(productId);
 
                 if (product == null)
-                    throw new BusinessRuleException("CRT-002", "Producto no encontrado en el inventario.");
+                    throw new NotFoundException("CRT-002", "Producto no encontrado.");
 
                 if (product.Stock < req.Cantidad)
                     throw new BusinessRuleException("CRT-003", $"Stock insuficiente. Disponible: {product.Stock}, solicitado: {req.Cantidad}.");
+
+                if (!await repo.CartExistsAsync(userId))
+                    throw new NotFoundException("CRT-001", "Carrito no encontrado.");
+
+                if (!await repo.ItemExistsAsync(userId, productId))
+                    throw new NotFoundException("CRT-001", "Producto no encontrado en el carrito.");
 
                 await repo.UpdateItemQuantityAsync(userId, productId, req.Cantidad);
 
                 var updatedCart = await repo.GetCartAsync(userId);
                 return Results.Ok(updatedCart);
 
+            }).WithTags("Cart");
+
+            app.MapDelete("/api/cart/{userId}/items/{productId}", async (
+                Guid userId,
+                Guid productId,
+                CartRepository repo) =>
+            {
+                if (!await repo.CartExistsAsync(userId))
+                    throw new NotFoundException("CRT-001", "Carrito no encontrado.");
+
+                if (!await repo.RemoveItemAsync(userId, productId))
+                    throw new NotFoundException("CRT-001", "Producto no encontrado en el carrito.");
+
+                return Results.NoContent();
+            }).WithTags("Cart");
+
+            app.MapDelete("/api/cart/{userId}", async (
+                Guid userId,
+                CartRepository repo) =>
+            {
+                if (!await repo.CartExistsAsync(userId))
+                    throw new NotFoundException("CRT-001", "Carrito no encontrado.");
+
+                await repo.ClearCartAsync(userId);
+                return Results.NoContent();
             }).WithTags("Cart");
         }
     }
