@@ -47,3 +47,10 @@ packages/
 # =========================
 appsettings.Development.json
 appsettings.Local.json
+# Pruebas y archivos transitorios SQLite
+.test-runs/
+*.db-shm
+*.db-wal
+*.db-journal
+# Configuración de ejemplo sin secretos
+!src/**/appsettings.Development.json

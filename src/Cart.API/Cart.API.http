@@ -1,0 +1,16 @@
+@Cart_API = http://localhost:5138
+@UserId = a1b2c3d4-0000-0000-0000-111122223333
+@ProductId = 3fa85f64-5717-4562-b3fc-2c963f66afa6
+
+### Carrito activo (usar identificadores reales devueltos por Users/Products)
+GET {{Cart_API}}/api/cart/{{UserId}}
+Accept: application/json
+
+### Cantidad inválida -> CRT-004
+POST {{Cart_API}}/api/cart/{{UserId}}/items
+Content-Type: application/json
+
+{"productoId":"{{ProductId}}","cantidad":0}
+
+### Health checks
+GET {{Cart_API}}/health/ready
