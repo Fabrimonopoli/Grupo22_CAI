@@ -19,13 +19,19 @@ public static class ProductsEndpointsExtensions
         .WithTags("Products");
 
         // ── GET /api/products/{id} (Obtener detalle de producto) ────────────────
-        app.MapGet("/api/products/{id:guid}", async (Guid id, ProductRepository repo) =>
+        app.MapGet("/api/products/{id}", async (string id, ProductRepository repo) =>
         {
-            var product = await repo.GetByIdAsync(id);
+            if (!Guid.TryParse(id, out var guidId))
+            {
+                throw new NotFoundException(ProductErrorCodes.Prd001, "Producto no encontrado.");
+            }
+
+            var product = await repo.GetByIdAsync(guidId);
             if (product is null)
             {
                 throw new NotFoundException(ProductErrorCodes.Prd001, "Producto no encontrado.");
             }
+
             return Results.Ok(product);
         })
         .WithTags("Products");
@@ -60,9 +66,14 @@ public static class ProductsEndpointsExtensions
         .WithTags("Products");
 
         // ── PUT /api/products/{id} (Actualizar producto) ────────────────────────
-        app.MapPut("/api/products/{id:guid}", async (Guid id, UpdateProductRequest req, ProductRepository repo) =>
+        app.MapPut("/api/products/{id}", async (string id, UpdateProductRequest req, ProductRepository repo) =>
         {
-            var product = await repo.GetByIdAsync(id);
+            if (!Guid.TryParse(id, out var guidId))
+            {
+                throw new NotFoundException(ProductErrorCodes.Prd001, "Producto no encontrado.");
+            }
+
+            var product = await repo.GetByIdAsync(guidId);
             if (product is null)
             {
                 throw new NotFoundException(ProductErrorCodes.Prd001, "Producto no encontrado.");
@@ -74,7 +85,7 @@ public static class ProductsEndpointsExtensions
             }
 
             var duplicate = await repo.GetByNameAndCategoryAsync(req.Nombre, req.Categoria);
-            if (duplicate is not null && duplicate.Id != id)
+            if (duplicate is not null && duplicate.Id != guidId)
             {
                 throw new BusinessRuleException(ProductErrorCodes.Prd003, $"Ya existe un producto con ese nombre en la categoría '{req.Categoria}'.");
             }
@@ -91,22 +102,27 @@ public static class ProductsEndpointsExtensions
         .WithTags("Products");
 
         // ── DELETE /api/products/{id} (Eliminar producto validando órdenes activas) ─
-        app.MapDelete("/api/products/{id:guid}", async (Guid id, ProductRepository repo, OrdersApiClient ordersClient) =>
+        app.MapDelete("/api/products/{id}", async (string id, ProductRepository repo, OrdersApiClient ordersClient) =>
         {
-            var product = await repo.GetByIdAsync(id);
+            if (!Guid.TryParse(id, out var guidId))
+            {
+                throw new NotFoundException(ProductErrorCodes.Prd001, "Producto no encontrado.");
+            }
+
+            var product = await repo.GetByIdAsync(guidId);
             if (product is null)
             {
                 throw new NotFoundException(ProductErrorCodes.Prd001, "Producto no encontrado.");
             }
 
             // Consulta sincrónica a Orders.API para verificar órdenes activas (PRD-004)
-            var hasActiveOrders = await ordersClient.HasActiveOrdersAsync(id);
+            var hasActiveOrders = await ordersClient.HasActiveOrdersAsync(guidId);
             if (hasActiveOrders)
             {
                 throw new BusinessRuleException(ProductErrorCodes.Prd004, "El producto tiene órdenes activas y no puede eliminarse.");
             }
 
-            await repo.DeleteAsync(id);
+            await repo.DeleteAsync(guidId);
             return Results.NoContent();
         })
         .WithTags("Products");
