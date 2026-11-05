@@ -26,9 +26,10 @@ public static class EndpointsExtensions
             }
 
             var user = await usersClient.GetByIdAsync(request.UsuarioId, cancellationToken)
-                ?? throw new BusinessRuleException(NotificationErrorCodes.Ntf001, "El usuario destinatario no existe.");
+                ?? throw new NotFoundException(NotificationErrorCodes.Ntf001, "El usuario destinatario no fue encontrado.");
+
             if (!user.Activo)
-                throw new BusinessRuleException(NotificationErrorCodes.Ntf001, "El usuario destinatario está inactivo.");
+                throw new BusinessRuleException(NotificationErrorCodes.Ntf002, "El usuario destinatario está inactivo.");
 
             var notification = new Notification
             {
@@ -55,7 +56,7 @@ public static class EndpointsExtensions
         .Produces<NotificationResponse>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        .ProducesProblem(StatusCodes.Status500InternalServerError);
 
         app.MapGet("/api/notifications/{userId:guid}", async (
             Guid userId,
@@ -67,11 +68,19 @@ public static class EndpointsExtensions
                 throw new BusinessRuleException(NotificationErrorCodes.Ntf002, "El identificador del usuario es inválido.");
 
             var user = await usersClient.GetByIdAsync(userId, cancellationToken)
-                ?? throw new BusinessRuleException(NotificationErrorCodes.Ntf001, "El usuario no existe.");
+                ?? throw new NotFoundException(NotificationErrorCodes.Ntf001, "El usuario no existe.");
+
             if (!user.Activo)
-                throw new BusinessRuleException(NotificationErrorCodes.Ntf001, "El usuario está inactivo.");
+                throw new BusinessRuleException(NotificationErrorCodes.Ntf002, "El usuario está inactivo.");
 
             var notifications = await repository.GetByUserIdAsync(userId, cancellationToken);
+
+            if (notifications.Count == 0)
+            {
+                throw new NotFoundException(
+                    NotificationErrorCodes.Ntf003,
+                    "No se encontraron notificaciones para el usuario.");
+            }
 
             return Results.Ok(notifications.Select(n =>
                 new NotificationResponse(
@@ -86,6 +95,6 @@ public static class EndpointsExtensions
         .Produces<IEnumerable<NotificationResponse>>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        .ProducesProblem(StatusCodes.Status500InternalServerError);
     }
 }
