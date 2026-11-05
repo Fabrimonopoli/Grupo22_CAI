@@ -1,5 +1,6 @@
 using Serilog;
 using Serilog.Events;
+using Serilog.Formatting.Json;
 
 namespace Notifications.API.Extensions;
 
@@ -10,13 +11,17 @@ public static class LoggingExtensions
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
             .Enrich.FromLogContext()
+            .Enrich.WithProperty("Servicio", "Notifications.API")
             .WriteTo.Console(outputTemplate:
-                "[{Timestamp:HH:mm:ss} {Level:u3}] [CorrelationId:{CorrelationId}] {Message:lj}{NewLine}{Exception}")
-            .WriteTo.File("logs/audit.log",
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} | {CorrelationId} | {RequestMethod} | {RequestPath} | {StatusCode}{NewLine}",
+                "[{Timestamp:HH:mm:ss} {Level:u3}] [{Servicio}] [CorrelationId:{CorrelationId}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.File(
+                formatter: new JsonFormatter(renderMessage: true),
+                path: "logs/audit-.json",
                 rollingInterval: RollingInterval.Day)
             .CreateLogger();
+
         builder.Host.UseSerilog();
     }
 }

@@ -8,12 +8,12 @@ public static class NotificationErrorCodes
     public const string Ntf004 = "NTF-004";
 }
 
-public sealed class NotificationNotFoundException(string message) : Exception(message)
+public class NotFoundException(string errorCode, string message) : Exception(message)
 {
-    public string ErrorCode => NotificationErrorCodes.Ntf003;
+    public string ErrorCode { get; } = errorCode;
 }
 
-public sealed class BusinessRuleException(string errorCode, string message) : Exception(message)
+public class BusinessRuleException(string errorCode, string message) : Exception(message)
 {
     public string ErrorCode { get; } = errorCode;
 }

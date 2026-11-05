@@ -8,9 +8,6 @@ namespace Notifications.API.Extensions.Endpoints;
 
 public static class NotificationsEndpointsExtensions
 {
-    /// <summary>
-    /// Registra los endpoints para enviar y consultar notificaciones.
-    /// </summary>
     public static void MapNotificationEndpoints(this WebApplication app)
     {
         app.MapPost("/api/notifications/send", async (
@@ -21,10 +18,12 @@ public static class NotificationsEndpointsExtensions
         {
             if (request.UsuarioId == Guid.Empty ||
                 string.IsNullOrWhiteSpace(request.Tipo) ||
+                !NotificationTypes.IsValid(request.Tipo.Trim()) ||
                 string.IsNullOrWhiteSpace(request.Mensaje) ||
-                request.Tipo.Length > 50 ||
                 request.Mensaje.Length > 500)
+            {
                 throw new BusinessRuleException(NotificationErrorCodes.Ntf002, "Los datos de la notificación son inválidos.");
+            }
 
             var user = await usersClient.GetByIdAsync(request.UsuarioId, cancellationToken)
                 ?? throw new BusinessRuleException(NotificationErrorCodes.Ntf001, "El usuario destinatario no existe.");
@@ -36,11 +35,20 @@ public static class NotificationsEndpointsExtensions
                 UsuarioId = request.UsuarioId,
                 Tipo = request.Tipo.Trim(),
                 Mensaje = request.Mensaje.Trim(),
-                FechaCreacion = DateTime.UtcNow
+                Estado = NotificationStates.Enviada,
+                FechaEnvio = DateTime.UtcNow
             };
+
             await repository.CreateAsync(notification, cancellationToken);
-            var response = new NotificationResponse(notification.Id, notification.UsuarioId,
-                notification.Tipo, notification.Mensaje, notification.FechaCreacion);
+
+            var response = new NotificationResponse(
+                notification.Id,
+                notification.UsuarioId,
+                notification.Mensaje,
+                notification.Tipo,
+                notification.Estado,
+                notification.FechaEnvio);
+
             return Results.Created($"/api/notifications/{notification.UsuarioId}", response);
         })
         .WithTags("Notifications")
@@ -64,8 +72,15 @@ public static class NotificationsEndpointsExtensions
                 throw new BusinessRuleException(NotificationErrorCodes.Ntf001, "El usuario está inactivo.");
 
             var notifications = await repository.GetByUserIdAsync(userId, cancellationToken);
+
             return Results.Ok(notifications.Select(n =>
-                new NotificationResponse(n.Id, n.UsuarioId, n.Tipo, n.Mensaje, n.FechaCreacion)));
+                new NotificationResponse(
+                    n.Id,
+                    n.UsuarioId,
+                    n.Mensaje,
+                    n.Tipo,
+                    n.Estado,
+                    n.FechaEnvio)));
         })
         .WithTags("Notifications")
         .Produces<IEnumerable<NotificationResponse>>(StatusCodes.Status200OK)
