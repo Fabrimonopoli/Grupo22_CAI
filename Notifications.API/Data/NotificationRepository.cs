@@ -14,15 +14,16 @@ public sealed class NotificationRepository(IConfiguration config)
         using var connection = CreateConnection();
         await connection.OpenAsync(cancellationToken);
         await connection.ExecuteAsync(new CommandDefinition("""
-            INSERT INTO Notification (Id, UsuarioId, Tipo, Mensaje, FechaCreacion)
-            VALUES (@Id, @UsuarioId, @Tipo, @Mensaje, @FechaCreacion)
+            INSERT INTO Notification (Id, UsuarioId, Tipo, Mensaje, Estado, FechaEnvio)
+            VALUES (@Id, @UsuarioId, @Tipo, @Mensaje, @Estado, @FechaEnvio)
             """, new
         {
             Id = notification.Id.ToString(),
             UsuarioId = notification.UsuarioId.ToString(),
             notification.Tipo,
             notification.Mensaje,
-            FechaCreacion = notification.FechaCreacion.ToString("O")
+            notification.Estado,
+            FechaEnvio = notification.FechaEnvio.ToString("O")
         }, cancellationToken: cancellationToken));
     }
 
@@ -32,10 +33,10 @@ public sealed class NotificationRepository(IConfiguration config)
         using var connection = CreateConnection();
         await connection.OpenAsync(cancellationToken);
         var result = await connection.QueryAsync<Notification>(new CommandDefinition("""
-            SELECT Id, UsuarioId, Tipo, Mensaje, FechaCreacion
+            SELECT Id, UsuarioId, Tipo, Mensaje, Estado, FechaEnvio
             FROM Notification
             WHERE UsuarioId = @userId
-            ORDER BY FechaCreacion DESC
+            ORDER BY FechaEnvio DESC
             """, new { userId = userId.ToString() }, cancellationToken: cancellationToken));
         return result.AsList();
     }
