@@ -15,9 +15,10 @@ public sealed class DatabaseInitializer(IConfiguration config, ILogger<DatabaseI
             CREATE TABLE IF NOT EXISTS Notification (
                 Id TEXT PRIMARY KEY,
                 UsuarioId TEXT NOT NULL,
-                Tipo TEXT NOT NULL,
+                Tipo TEXT NOT NULL CHECK (Tipo IN ('Email', 'Push', 'SMS')),
                 Mensaje TEXT NOT NULL,
-                FechaCreacion TEXT NOT NULL
+                Estado TEXT NOT NULL CHECK (Estado IN ('Pendiente', 'Enviada', 'Fallida')),
+                FechaEnvio TEXT NOT NULL
             );
             """);
         logger.LogInformation("SQLite inicializado correctamente para Notifications.API → {db}", connectionString);
