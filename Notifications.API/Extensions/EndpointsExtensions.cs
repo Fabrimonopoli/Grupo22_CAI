@@ -53,10 +53,16 @@ public static class EndpointsExtensions
             return Results.Created($"/api/notifications/{notification.UsuarioId}", response);
         })
         .WithTags("Notifications")
+        .WithSummary("Registrar y simular envío de notificación.")
+        .WithDescription("Registra una notificación y simula su envío (Email, Push, SMS) validando que el usuario exista y esté activo en Users.API.\n\n" +
+                         "**Códigos de error posibles:**\n" +
+                         "- **NTF-001 (404):** El usuario destinatario no fue encontrado en Users.API.\n" +
+                         "- **NTF-002 (400):** Datos de notificación inválidos, tipo no reconocido o usuario inactivo.\n" +
+                         "- **NTF-004 (500):** Error interno inesperado en el servicio o persistencia.")
         .Produces<NotificationResponse>(StatusCodes.Status201Created)
-        .ProducesProblem(StatusCodes.Status400BadRequest)
-        .ProducesProblem(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status500InternalServerError);
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest, "application/problem+json")
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound, "application/problem+json")
+        .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
         app.MapGet("/api/notifications/{userId:guid}", async (
             Guid userId,
@@ -68,7 +74,7 @@ public static class EndpointsExtensions
                 throw new BusinessRuleException(NotificationErrorCodes.Ntf002, "El identificador del usuario es inválido.");
 
             var user = await usersClient.GetByIdAsync(userId, cancellationToken)
-                ?? throw new NotFoundException(NotificationErrorCodes.Ntf001, "El usuario no existe.");
+                ?? throw new NotFoundException(NotificationErrorCodes.Ntf001, "El usuario no fue encontrado.");
 
             if (!user.Activo)
                 throw new BusinessRuleException(NotificationErrorCodes.Ntf002, "El usuario está inactivo.");
@@ -92,9 +98,16 @@ public static class EndpointsExtensions
                     n.FechaEnvio)));
         })
         .WithTags("Notifications")
+        .WithSummary("Listar notificaciones de un usuario.")
+        .WithDescription("Obtiene el historial de notificaciones ordenadas por fecha descendente asociadas al ID de usuario indicado.\n\n" +
+                         "**Códigos de error posibles:**\n" +
+                         "- **NTF-001 (404):** El usuario no fue encontrado en Users.API.\n" +
+                         "- **NTF-002 (400):** Identificador de usuario inválido o usuario inactivo.\n" +
+                         "- **NTF-003 (404):** No se encontraron notificaciones registradas para el usuario.\n" +
+                         "- **NTF-004 (500):** Error interno inesperado al consultar la persistencia.")
         .Produces<IEnumerable<NotificationResponse>>(StatusCodes.Status200OK)
-        .ProducesProblem(StatusCodes.Status400BadRequest)
-        .ProducesProblem(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status500InternalServerError);
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest, "application/problem+json")
+        .Produces<ErrorResponse>(StatusCodes.Status404NotFound, "application/problem+json")
+        .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError, "application/problem+json");
     }
 }
