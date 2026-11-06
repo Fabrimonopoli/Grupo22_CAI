@@ -40,8 +40,6 @@ public static class ServicesExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
-            options.OperationFilter<OrderOpenApiFilter>();
-
             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             if (File.Exists(xmlPath))
@@ -50,14 +48,9 @@ public static class ServicesExtensions
             }
         });
 
+        // Health Checks con tags 'ready' y 'live' requeridos
         services.AddHealthChecks()
-            .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["database"])
-            .AddCheck<ApiStatusCheck>("api-status", tags: ["api"]);
-
-        services.AddHealthChecksUI(setup =>
-        {
-            setup.SetEvaluationTimeInSeconds(600);
-            setup.AddHealthCheckEndpoint("OrdersAPI", "/health");
-        }).AddInMemoryStorage();
+            .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["ready", "database"])
+            .AddCheck<ApiStatusCheck>("api-status", tags: ["live", "api"]);
     }
 }
