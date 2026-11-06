@@ -1,6 +1,5 @@
 ﻿using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Orders.API.Middleware;
 using Serilog;
 
 namespace Orders.API.Extensions;
@@ -9,27 +8,31 @@ public static class MiddlewareExtensions
 {
     public static void UseAppMiddleware(this WebApplication app)
     {
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
+        app.UseSwagger();
+        app.UseSwaggerUI();
 
-        app.UseSerilogRequestLogging(options =>
-        {
-            options.GetLevel = (httpContext, _, ex) =>
-                (ex != null) ? Serilog.Events.LogEventLevel.Error :
-                    (httpContext.Request.Path.StartsWithSegments("/health"))
-                        ? Serilog.Events.LogEventLevel.Verbose : Serilog.Events.LogEventLevel.Information;
-        });
-
-        app.UseMiddleware<AuditMiddleware>();
+        app.UseMiddleware<CorrelationIdMiddleware>();
+        app.UseSerilogRequestLogging();
         app.UseExceptionHandler();
 
+        // 1. Health check general
         app.MapHealthChecks("/health", new HealthCheckOptions
         {
             ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
         });
-        app.MapHealthChecksUI(setup => setup.UIPath = "/health-ui");
+
+        // 2. Readiness check (SQLite)
+        app.MapHealthChecks("/health/ready", new HealthCheckOptions
+        {
+            Predicate = check => check.Tags.Contains("ready"),
+            ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+        });
+
+        // 3. Liveness check (Proceso API)
+        app.MapHealthChecks("/health/live", new HealthCheckOptions
+        {
+            Predicate = check => check.Tags.Contains("live"),
+            ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+        });
     }
 }
