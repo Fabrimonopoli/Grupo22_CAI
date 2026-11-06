@@ -1,5 +1,8 @@
+using Dapper;
 using Notifications.API.Data;
 using Notifications.API.Extensions;
+
+SqlMapper.AddTypeHandler(new SqliteGuidTypeHandler());
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddAppLogging();

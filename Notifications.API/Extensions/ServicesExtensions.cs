@@ -30,13 +30,9 @@ public static class ServicesExtensions
             if (File.Exists(xmlPath)) options.IncludeXmlComments(xmlPath);
         });
 
+        // Health Checks con tags 'ready' y 'live' requeridos
         services.AddHealthChecks()
-            .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["database"])
-            .AddCheck<ApiStatusCheck>("api-status", tags: ["api"]);
-        services.AddHealthChecksUI(setup =>
-        {
-            setup.SetEvaluationTimeInSeconds(600);
-            setup.AddHealthCheckEndpoint("NotificationsAPI", "/health");
-        }).AddInMemoryStorage();
+            .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["ready", "database"])
+            .AddCheck<ApiStatusCheck>("api-status", tags: ["live", "api"]);
     }
 }

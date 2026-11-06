@@ -1,41 +1,52 @@
 using Microsoft.AspNetCore.Diagnostics;
-using Notifications.API.Clients;
 using Notifications.API.Exceptions;
 
 namespace Notifications.API.ExceptionHandlers;
 
-public sealed class NotificationExceptionHandler : IExceptionHandler
+public sealed class NotificationExceptionHandler(ILogger<NotificationExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(
         HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
-        var (status, title, detail, code) = exception switch
+        var (status, title, type, code) = exception switch
         {
-            NotificationNotFoundException ex =>
-                (StatusCodes.Status404NotFound, "Not Found", ex.Message, ex.ErrorCode),
-            BusinessRuleException ex when ex.ErrorCode == NotificationErrorCodes.Ntf002 =>
-                (StatusCodes.Status400BadRequest, "Bad Request", ex.Message, ex.ErrorCode),
-            BusinessRuleException ex when ex.ErrorCode == NotificationErrorCodes.Ntf001 =>
-                (StatusCodes.Status404NotFound, "Not Found", ex.Message, ex.ErrorCode),
-            UsersApiUnavailableException ex =>
-                (StatusCodes.Status503ServiceUnavailable, "Service Unavailable", ex.Message, NotificationErrorCodes.Ntf003),
-            BusinessRuleException ex when ex.ErrorCode == NotificationErrorCodes.Ntf003 =>
-                (StatusCodes.Status503ServiceUnavailable, "Service Unavailable", ex.Message, ex.ErrorCode),
+            NotFoundException ex =>
+                (StatusCodes.Status404NotFound,
+                 "Not Found",
+                 "https://tools.ietf.org/html/rfc7231#section-6.5.4",
+                 ex.ErrorCode),
+
+            BusinessRuleException ex =>
+                (StatusCodes.Status400BadRequest,
+                 "Bad Request",
+                 "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                 ex.ErrorCode),
+
             _ => (0, string.Empty, string.Empty, string.Empty)
         };
 
         if (status == 0) return false;
+
+        var correlationId = context.Response.Headers["X-Correlation-Id"].FirstOrDefault()
+            ?? context.Request.Headers["X-Correlation-Id"].FirstOrDefault()
+            ?? string.Empty;
+
+        logger.LogWarning("Error de negocio [{ErrorCode}] en {Path}: {Message}",
+            code, context.Request.Path, exception.Message);
+
         context.Response.StatusCode = status;
         await context.Response.WriteAsJsonAsync(new
         {
-            type = $"https://httpstatuses.com/{status}",
+            type,
             title,
             status,
-            detail,
+            detail = exception.Message,
             instance = context.Request.Path.Value,
             errorCode = code,
-            errorMessage = exception.Message
+            errorMessage = exception.Message,
+            correlationId
         }, cancellationToken);
+
         return true;
     }
 }
@@ -45,17 +56,26 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
     public async ValueTask<bool> TryHandleAsync(
         HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
-        logger.LogError(exception, "Error no controlado procesando {Path}", context.Request.Path);
+        var correlationId = context.Response.Headers["X-Correlation-Id"].FirstOrDefault()
+            ?? context.Request.Headers["X-Correlation-Id"].FirstOrDefault()
+            ?? string.Empty;
+
+        logger.LogError(exception, "Error no controlado procesando {Path} [CorrelationId: {CorrelationId}]",
+            context.Request.Path, correlationId);
+
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await context.Response.WriteAsJsonAsync(new
         {
-            type = "https://httpstatuses.com/500",
+            type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
             title = "Internal Server Error",
-            status = 500,
-            detail = "Ocurrió un error inesperado en el servidor.",
+            status = StatusCodes.Status500InternalServerError,
+            detail = "Ocurrió un error inesperado al procesar la solicitud.",
             instance = context.Request.Path.Value,
-            errorCode = NotificationErrorCodes.Ntf004
+            errorCode = NotificationErrorCodes.Ntf004,
+            errorMessage = "Error interno al procesar la notificación.",
+            correlationId
         }, cancellationToken);
+
         return true;
     }
 }
