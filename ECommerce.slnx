@@ -1,4 +1,10 @@
 <Solution>
+  <Folder Name="/docs/">
+    <File Path="docs/architecture.png" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
   <Project Path="Cart.API/Cart.API.csproj" Id="85fad3b3-7b95-4a8d-99a5-9a584843bac1" />
   <Project Path="Notifications.API/Notifications.API.csproj" />
   <Project Path="Orders.API/Orders.API.csproj" Id="6bba85fe-568a-49a7-bd6b-d63e5def9135" />
