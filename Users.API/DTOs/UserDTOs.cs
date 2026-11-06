@@ -101,3 +101,14 @@ public class LoginUserResponse
     /// <example>maria@email.com</example>
     public string Email { get; set; } = string.Empty;
 }
+public sealed record ErrorResponse
+{
+    public string Type { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public int Status { get; init; }
+    public string Detail { get; init; } = string.Empty;
+    public string Instance { get; init; } = string.Empty;
+    public string ErrorCode { get; init; } = string.Empty;
+    public string ErrorMessage { get; init; } = string.Empty;
+    public string CorrelationId { get; init; } = string.Empty;
+}

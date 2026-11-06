@@ -23,7 +23,11 @@ public static class UsersEndpointsExtensions
 
             await repo.CreateAsync(user);
             return Results.Created($"/api/users/{user.Id}", new RegisterUserResponse { Id = user.Id, Nombre = user.Nombre, Apellido = user.Apellido, Email = user.Email, FechaRegistro = user.FechaRegistro, Activo = user.Activo });
-        }).WithTags("Users");
+        }).WithTags("Users")
+        .Produces<RegisterUserResponse>(StatusCodes.Status201Created)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest, "application/problem+json")
+        .Produces<ErrorResponse>(StatusCodes.Status409Conflict, "application/problem+json")
+        .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
         app.MapPost("/api/users/login", async (LoginUserRequest req, UserRepository repo) =>
         {
@@ -59,7 +63,12 @@ public static class UsersEndpointsExtensions
                 await repo.UpdateFailedAttemptsAsync(user.Id, 0, true);
 
             return Results.Ok(new LoginUserResponse { Id = user.Id, Nombre = user.Nombre, Apellido = user.Apellido, Email = user.Email });
-        }).WithTags("Users");
+        }).WithTags("Users")
+        .Produces<LoginUserResponse>(StatusCodes.Status200OK)
+        .Produces<ErrorResponse>(StatusCodes.Status400BadRequest, "application/problem+json")
+        .Produces<ErrorResponse>(StatusCodes.Status401Unauthorized, "application/problem+json")
+        .Produces<ErrorResponse>(StatusCodes.Status403Forbidden, "application/problem+json")
+        .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
         app.MapGet("/api/users/{id:guid}", async (Guid id, UserRepository repo) =>
         {
