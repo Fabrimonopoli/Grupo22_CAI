@@ -15,6 +15,7 @@
     <Folder Include="ExceptionHandlers\" />
   </ItemGroup>
 	<ItemGroup>
+		<PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0"/>
 		<PackageReference Include="Dapper" Version="2.1.35" />
 		<PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
 		<PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
