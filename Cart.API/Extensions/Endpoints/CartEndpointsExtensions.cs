@@ -19,7 +19,10 @@ namespace Cart.API.Extensions.Endpoints
                     throw new NotFoundException("CRT-001", "Carrito no encontrado.");
 
                 return Results.Ok(await repo.GetCartAsync(userId));
-            }).WithTags("Cart");
+            }).WithTags("Cart")
+                .Produces<CartModel>(StatusCodes.Status200OK)
+                .Produces<ErrorResponse>(StatusCodes.Status404NotFound, "application/problem+json")
+                .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
             // ========================================================
             // ENDPOINT 1: Agregar producto al carrito (POST)
@@ -49,7 +52,12 @@ namespace Cart.API.Extensions.Endpoints
                 var updatedCart = await repo.GetCartAsync(userId);
                 return Results.Ok(updatedCart);
 
-            }).WithTags("Cart");
+            }).WithTags("Cart")
+            .Produces<CartModel>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest, "application/problem+json")
+            .Produces<ErrorResponse>(StatusCodes.Status404NotFound, "application/problem+json")
+            .Produces<ErrorResponse>(StatusCodes.Status422UnprocessableEntity, "application/problem+json")
+            .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
 
             // ========================================================
@@ -84,7 +92,12 @@ namespace Cart.API.Extensions.Endpoints
                 var updatedCart = await repo.GetCartAsync(userId);
                 return Results.Ok(updatedCart);
 
-            }).WithTags("Cart");
+            }).WithTags("Cart")
+            .Produces<CartModel>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest, "application/problem+json")
+            .Produces<ErrorResponse>(StatusCodes.Status404NotFound, "application/problem+json")
+            .Produces<ErrorResponse>(StatusCodes.Status422UnprocessableEntity, "application/problem+json")
+            .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
             app.MapDelete("/api/cart/{userId}/items/{productId}", async (
                 Guid userId,
@@ -98,7 +111,10 @@ namespace Cart.API.Extensions.Endpoints
                     throw new NotFoundException("CRT-001", "Producto no encontrado en el carrito.");
 
                 return Results.NoContent();
-            }).WithTags("Cart");
+            }).WithTags("Cart")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ErrorResponse>(StatusCodes.Status404NotFound, "application/problem+json")
+            .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError, "application/problem+json");
 
             app.MapDelete("/api/cart/{userId}", async (
                 Guid userId,
@@ -109,7 +125,10 @@ namespace Cart.API.Extensions.Endpoints
 
                 await repo.ClearCartAsync(userId);
                 return Results.NoContent();
-            }).WithTags("Cart");
+            }).WithTags("Cart")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ErrorResponse>(StatusCodes.Status404NotFound, "application/problem+json")
+            .Produces<ErrorResponse>(StatusCodes.Status500InternalServerError, "application/problem+json");
         }
     }
 }

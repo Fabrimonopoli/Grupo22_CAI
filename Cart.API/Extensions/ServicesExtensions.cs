@@ -38,14 +38,10 @@ namespace Cart.API.Extensions
 
             // 4. Enchufamos los Sensores de Salud
             services.AddHealthChecks()
-                .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["database"])
-                .AddCheck<ApiStatusCheck>("api-status", tags: ["api"]);
+            .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["ready", "database"])
+            .AddCheck<ApiStatusCheck>("api-status", tags: ["live", "api"]);
 
-            services.AddHealthChecksUI(setup =>
-            {
-                setup.SetEvaluationTimeInSeconds(600);
-                setup.AddHealthCheckEndpoint("CartAPI", "/health");
-            }).AddInMemoryStorage();
+           
         }
     }
 }
