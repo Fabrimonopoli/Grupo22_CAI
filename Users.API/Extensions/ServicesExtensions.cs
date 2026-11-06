@@ -22,8 +22,6 @@ public static class ServicesExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
-            options.OperationFilter<UserOpenApiFilter>();
-
             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             if (File.Exists(xmlPath))
@@ -33,13 +31,9 @@ public static class ServicesExtensions
         });
 
         services.AddHealthChecks()
-            .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["database"])
-            .AddCheck<ApiStatusCheck>("api-status", tags: ["api"]);
+            .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["ready", "database"])
+            .AddCheck<ApiStatusCheck>("api-status", tags: ["live", "api"]);
 
-        services.AddHealthChecksUI(setup =>
-        {
-            setup.SetEvaluationTimeInSeconds(600);
-            setup.AddHealthCheckEndpoint("UsersAPI", "/health");
-        }).AddInMemoryStorage();
+
     }
 }
