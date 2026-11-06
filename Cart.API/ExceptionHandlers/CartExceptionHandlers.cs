@@ -3,15 +3,15 @@ using Microsoft.AspNetCore.Diagnostics;
 
 namespace Cart.API.ExceptionHandlers;
 
-public class NotFoundExceptionHandler : IExceptionHandler
+public class NotFoundExceptionHandler(ILogger<NotFoundExceptionHandler> logger) : IExceptionHandler
 {
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext context,
-        Exception exception,
-        CancellationToken cancellationToken)
+    public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
-        if (exception is not NotFoundException ex)
-            return false;
+        if (exception is not NotFoundException ex) return false;
+
+        var correlationId = context.Response.Headers["X-Correlation-Id"].FirstOrDefault() ?? string.Empty;
+
+        logger.LogWarning("Recurso no encontrado [{ErrorCode}] en {Path}: {Message}", ex.Code, context.Request.Path, ex.Message);
 
         context.Response.StatusCode = StatusCodes.Status404NotFound;
         await context.Response.WriteAsJsonAsync(new
@@ -22,41 +22,30 @@ public class NotFoundExceptionHandler : IExceptionHandler
             detail = "El recurso solicitado no fue encontrado.",
             instance = context.Request.Path.Value,
             errorCode = ex.Code,
-            errorMessage = ex.Message
+            errorMessage = ex.Message,
+            correlationId
         }, cancellationToken);
 
         return true;
     }
 }
 
-public class BusinessRuleExceptionHandler : IExceptionHandler
+public class BusinessRuleExceptionHandler(ILogger<BusinessRuleExceptionHandler> logger) : IExceptionHandler
 {
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext context,
-        Exception exception,
-        CancellationToken cancellationToken)
+    public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
-        if (exception is not BusinessRuleException ex)
-            return false;
+        if (exception is not BusinessRuleException ex) return false;
 
         var (status, type, title, detail) = ex.Code switch
         {
-            "CRT-004" => (
-                StatusCodes.Status400BadRequest,
-                "https://tools.ietf.org/html/rfc7231#section-6.5.1",
-                "Bad Request",
-                "La cantidad indicada no es válida."),
-            "CRT-003" => (
-                StatusCodes.Status422UnprocessableEntity,
-                "https://tools.ietf.org/html/rfc4918#section-11.2",
-                "Unprocessable Entity",
-                "No se puede procesar la solicitud."),
-            _ => (
-                StatusCodes.Status409Conflict,
-                "https://tools.ietf.org/html/rfc7231#section-6.5.9",
-                "Conflict",
-                "La solicitud no cumple con las reglas de negocio.")
+            "CRT-004" => (StatusCodes.Status400BadRequest, "https://tools.ietf.org/html/rfc7231#section-6.5.1", "Bad Request", "La cantidad indicada no es válida."),
+            "CRT-003" => (StatusCodes.Status422UnprocessableEntity, "https://tools.ietf.org/html/rfc4918#section-11.2", "Unprocessable Entity", "No se puede procesar la solicitud."),
+            _ => (StatusCodes.Status409Conflict, "https://tools.ietf.org/html/rfc7231#section-6.5.9", "Conflict", "Regla de negocio no cumplida.")
         };
+
+        var correlationId = context.Response.Headers["X-Correlation-Id"].FirstOrDefault() ?? string.Empty;
+
+        logger.LogWarning("Regla de negocio no cumplida [{ErrorCode}] en {Path}: {Message}", ex.Code, context.Request.Path, ex.Message);
 
         context.Response.StatusCode = status;
         await context.Response.WriteAsJsonAsync(new
@@ -67,20 +56,22 @@ public class BusinessRuleExceptionHandler : IExceptionHandler
             detail,
             instance = context.Request.Path.Value,
             errorCode = ex.Code,
-            errorMessage = ex.Message
+            errorMessage = ex.Message,
+            correlationId
         }, cancellationToken);
 
         return true;
     }
 }
 
-public class GlobalExceptionHandler : IExceptionHandler
+public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
-    public async ValueTask<bool> TryHandleAsync(
-        HttpContext context,
-        Exception exception,
-        CancellationToken cancellationToken)
+    public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
+        var correlationId = context.Response.Headers["X-Correlation-Id"].FirstOrDefault() ?? string.Empty;
+
+        logger.LogError(exception, "Error no controlado procesando {Path} [CorrelationId: {CorrelationId}]", context.Request.Path, correlationId);
+
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await context.Response.WriteAsJsonAsync(new
         {
@@ -90,7 +81,8 @@ public class GlobalExceptionHandler : IExceptionHandler
             detail = "Ocurrió un error inesperado en el servidor.",
             instance = context.Request.Path.Value,
             errorCode = "CRT-005",
-            errorMessage = "Error interno al procesar el carrito."
+            errorMessage = "Error interno al procesar el carrito.",
+            correlationId
         }, cancellationToken);
 
         return true;
