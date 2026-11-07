@@ -1,7 +1,6 @@
-using CartModel = Cart.API.Models.Cart;
-using CartItem = Cart.API.Models.CartItem;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using CartItem = Cart.API.Models.CartItem;
 
 namespace Cart.API.Data;
 
@@ -112,7 +111,8 @@ public class CartRepository
         return rows > 0;
     }
 
-    public async Task<CartModel> GetCartAsync(Guid userId)
+    // ACA EL CAMBIO DE TIPO DE RETORNO
+    public async Task<Models.Cart> GetCartAsync(Guid userId)
     {
         await using var connection = CreateConnection();
         await connection.OpenAsync();
@@ -124,7 +124,8 @@ public class CartRepository
             """,
             new { UserId = userId.ToString() });
 
-        return new CartModel
+        // ACA EL CAMBIO DE INSTANCIA
+        return new Models.Cart
         {
             UsuarioId = userId,
             FechaActualizacion = DateTime.UtcNow,
