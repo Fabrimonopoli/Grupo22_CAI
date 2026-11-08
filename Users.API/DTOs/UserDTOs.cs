@@ -4,9 +4,7 @@ namespace Users.API.DTOs;
 
 // ── REGISTRO DE USUARIO ──────────────────────────────────────────────────
 
-/// <summary>
-/// Solicitud para registrar un nuevo usuario en el sistema.
-/// </summary>
+/// <summary>Solicitud para registrar un nuevo usuario en el sistema.</summary>
 public class RegisterUserRequest
 {
     /// <summary>Nombre del usuario.</summary>
@@ -31,9 +29,7 @@ public class RegisterUserRequest
     public string Password { get; set; } = string.Empty;
 }
 
-/// <summary>
-/// Respuesta tras un registro de usuario exitoso.
-/// </summary>
+/// <summary>Respuesta tras un registro de usuario exitoso.</summary>
 public class RegisterUserResponse
 {
     /// <summary>Identificador único generado para el usuario (GUID).</summary>
@@ -53,7 +49,7 @@ public class RegisterUserResponse
     public string Email { get; set; } = string.Empty;
 
     /// <summary>Fecha y hora en la que se completó el registro (UTC).</summary>
-    /// <example>2024-03-10T09:00:00Z</example>
+    /// <example>2026-11-08T09:00:00Z</example>
     public DateTime FechaRegistro { get; set; }
 
     /// <summary>Indica si la cuenta se encuentra activa.</summary>
@@ -63,9 +59,7 @@ public class RegisterUserResponse
 
 // ── AUTENTICACIÓN / LOGIN ─────────────────────────────────────────────────
 
-/// <summary>
-/// Solicitud de inicio de sesión de usuario.
-/// </summary>
+/// <summary>Solicitud de inicio de sesión de usuario.</summary>
 public class LoginUserRequest
 {
     /// <summary>Correo electrónico registrado.</summary>
@@ -80,9 +74,7 @@ public class LoginUserRequest
     public string Password { get; set; } = string.Empty;
 }
 
-/// <summary>
-/// Respuesta tras un inicio de sesión exitoso.
-/// </summary>
+/// <summary>Respuesta tras un inicio de sesión exitoso.</summary>
 public class LoginUserResponse
 {
     /// <summary>Identificador único del usuario autenticado (GUID).</summary>
@@ -101,14 +93,39 @@ public class LoginUserResponse
     /// <example>maria@email.com</example>
     public string Email { get; set; } = string.Empty;
 }
+
+/// <summary>Estructura estándar de respuesta de error (RFC 7231 / Problem Details).</summary>
 public sealed record ErrorResponse
 {
+    /// <summary>URI de referencia al estándar RFC del error.</summary>
+    /// <example>https://tools.ietf.org/html/rfc7231#section-6.5.9</example>
     public string Type { get; init; } = string.Empty;
+
+    /// <summary>Título breve del error HTTP.</summary>
+    /// <example>Conflict</example>
     public string Title { get; init; } = string.Empty;
+
+    /// <summary>Código de estado HTTP.</summary>
+    /// <example>409</example>
     public int Status { get; init; }
+
+    /// <summary>Detalle específico del error ocurrido.</summary>
+    /// <example>Conflicto con el estado actual del recurso.</example>
     public string Detail { get; init; } = string.Empty;
+
+    /// <summary>Ruta relativa del endpoint invocado.</summary>
+    /// <example>/api/users/register</example>
     public string Instance { get; init; } = string.Empty;
+
+    /// <summary>Código de error interno del catálogo (ej. USR-001 a USR-006).</summary>
+    /// <example>USR-001</example>
     public string ErrorCode { get; init; } = string.Empty;
+
+    /// <summary>Mensaje descriptivo del catálogo de errores.</summary>
+    /// <example>El email 'maria@email.com' ya está registrado.</example>
     public string ErrorMessage { get; init; } = string.Empty;
+
+    /// <summary>Identificador único de correlación.</summary>
+    /// <example>a1b2c3d4e5f67890123456789abcdef0</example>
     public string CorrelationId { get; init; } = string.Empty;
 }

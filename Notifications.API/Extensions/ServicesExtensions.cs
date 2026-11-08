@@ -1,8 +1,11 @@
 using System.Reflection;
+using Microsoft.OpenApi.Models;
 using Notifications.API.Clients;
 using Notifications.API.Data;
+using Notifications.API.DTOs;
 using Notifications.API.ExceptionHandlers;
 using Notifications.API.HealthChecks;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Notifications.API.Extensions;
 
@@ -25,6 +28,12 @@ public static class ServicesExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
+            // Vincula los códigos del catálogo NTF-XXX en la tabla de respuestas
+            options.OperationFilter<NotificationOpenApiFilter>();
+
+            // Expone el contrato ErrorResponse en la sección Schemas al pie
+            options.DocumentFilter<ErrorResponseSchemaFilter>();
+
             var xmlPath = Path.Combine(AppContext.BaseDirectory,
                 $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");
             if (File.Exists(xmlPath)) options.IncludeXmlComments(xmlPath);
@@ -34,5 +43,13 @@ public static class ServicesExtensions
         services.AddHealthChecks()
             .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["ready", "database"])
             .AddCheck<ApiStatusCheck>("api-status", tags: ["live", "api"]);
+    }
+}
+
+public class ErrorResponseSchemaFilter : IDocumentFilter
+{
+    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
+    {
+        context.SchemaGenerator.GenerateSchema(typeof(ErrorResponse), context.SchemaRepository);
     }
 }

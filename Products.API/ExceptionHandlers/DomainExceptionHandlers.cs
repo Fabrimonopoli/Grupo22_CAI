@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using Products.API.Exceptions;
+using System.Text.Json;
 
 namespace Products.API.ExceptionHandlers;
 
@@ -22,7 +23,7 @@ public class NotFoundExceptionHandler(ILogger<NotFoundExceptionHandler> logger) 
             type = "https://tools.ietf.org/html/rfc7231#section-6.5.4",
             title = "Not Found",
             status = StatusCodes.Status404NotFound,
-            detail = ex.Message,
+            detail = "El recurso solicitado no fue encontrado.",
             instance = context.Request.Path.Value,
             errorCode = ex.ErrorCode,
             errorMessage = ex.Message,
@@ -39,12 +40,32 @@ public class BusinessRuleExceptionHandler(ILogger<BusinessRuleExceptionHandler> 
     {
         if (exception is not BusinessRuleException ex) return false;
 
-        var (status, type, title) = ex.ErrorCode switch
+        var (status, type, title, genericDetail) = ex.ErrorCode switch
         {
-            ProductErrorCodes.Prd002 => (StatusCodes.Status400BadRequest, "https://tools.ietf.org/html/rfc7231#section-6.5.1", "Bad Request"),
-            ProductErrorCodes.Prd003 => (StatusCodes.Status409Conflict, "https://tools.ietf.org/html/rfc7231#section-6.5.9", "Conflict"),
-            ProductErrorCodes.Prd004 => (StatusCodes.Status409Conflict, "https://tools.ietf.org/html/rfc7231#section-6.5.9", "Conflict"),
-            _ => (StatusCodes.Status400BadRequest, "https://tools.ietf.org/html/rfc7231#section-6.5.1", "Bad Request")
+            ProductErrorCodes.Prd002 => (
+                StatusCodes.Status400BadRequest,
+                "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                "Bad Request",
+                "Los datos del producto son inválidos."
+            ),
+            ProductErrorCodes.Prd003 => (
+                StatusCodes.Status409Conflict,
+                "https://tools.ietf.org/html/rfc7231#section-6.5.9",
+                "Conflict",
+                "No se puede procesar la solicitud."
+            ),
+            ProductErrorCodes.Prd004 => (
+                StatusCodes.Status409Conflict,
+                "https://tools.ietf.org/html/rfc7231#section-6.5.9",
+                "Conflict",
+                "No se puede procesar la solicitud."
+            ),
+            _ => (
+                StatusCodes.Status400BadRequest,
+                "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                "Bad Request",
+                "No se puede procesar la solicitud."
+            )
         };
 
         var correlationId = context.Response.Headers["X-Correlation-Id"].FirstOrDefault()
@@ -60,7 +81,7 @@ public class BusinessRuleExceptionHandler(ILogger<BusinessRuleExceptionHandler> 
             type,
             title,
             status,
-            detail = ex.Message,
+            detail = genericDetail,
             instance = context.Request.Path.Value,
             errorCode = ex.ErrorCode,
             errorMessage = ex.Message,
@@ -79,6 +100,28 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             ?? context.Request.Headers["X-Correlation-Id"].FirstOrDefault()
             ?? string.Empty;
 
+        // Errores de binding o JSON malformado (400)
+        if (exception is BadHttpRequestException or JsonException)
+        {
+            logger.LogWarning("Cuerpo de solicitud HTTP inválido en {Path}: {Message}", context.Request.Path, exception.Message);
+
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                type = "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                title = "Bad Request",
+                status = StatusCodes.Status400BadRequest,
+                detail = "Los datos del cuerpo de la solicitud son inválidos o tienen formato incorrecto.",
+                instance = context.Request.Path.Value,
+                errorCode = ProductErrorCodes.Prd002,
+                errorMessage = "Los datos del producto son inválidos.",
+                correlationId
+            }, cancellationToken);
+
+            return true;
+        }
+
+        // Errores internos no controlados (500)
         logger.LogError(exception, "Error no controlado procesando {Path} [CorrelationId: {CorrelationId}]",
             context.Request.Path, correlationId);
 

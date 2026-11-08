@@ -1,6 +1,9 @@
 <Solution>
   <Folder Name="/docs/">
     <File Path="docs/architecture.png" />
+    <File Path="docs/Evidencias_API_Orders.docx" />
+    <File Path="docs/Evidencias_API_Products.docx" />
+    <File Path="docs/Evidencias_API_Users.docx" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="README.md" />

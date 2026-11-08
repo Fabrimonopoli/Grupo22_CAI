@@ -1,9 +1,12 @@
 ﻿using System.Reflection;
 using Dapper;
+using Microsoft.OpenApi.Models;
 using Products.API.Clients;
 using Products.API.Data;
+using Products.API.DTOs;
 using Products.API.ExceptionHandlers;
 using Products.API.HealthChecks;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Products.API.Extensions;
 
@@ -33,6 +36,12 @@ public static class ServicesExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
+            // Modifica el texto al lado de cada código HTTP con su código PRD
+            options.OperationFilter<ProductOpenApiFilter>();
+
+            // Garantiza que el contrato ErrorResponse aparezca en la sección Schemas al pie
+            options.DocumentFilter<ErrorResponseSchemaFilter>();
+
             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             if (File.Exists(xmlPath))
@@ -41,9 +50,16 @@ public static class ServicesExtensions
             }
         });
 
-        // Health Checks con tags obligatorios 'ready' y 'live'
         services.AddHealthChecks()
             .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["ready", "database"])
             .AddCheck<ApiStatusCheck>("api-status", tags: ["live", "api"]);
+    }
+}
+
+public class ErrorResponseSchemaFilter : IDocumentFilter
+{
+    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
+    {
+        context.SchemaGenerator.GenerateSchema(typeof(ErrorResponse), context.SchemaRepository);
     }
 }
