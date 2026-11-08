@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using Orders.API.Exceptions;
+using System.Text.Json;
 
 namespace Orders.API.ExceptionHandlers;
 
@@ -22,10 +23,10 @@ public class NotFoundExceptionHandler(ILogger<NotFoundExceptionHandler> logger) 
             type = "https://tools.ietf.org/html/rfc7231#section-6.5.4",
             title = "Not Found",
             status = StatusCodes.Status404NotFound,
-            detail = ex.Message,
+            detail = "El recurso solicitado no fue encontrado.", // Frase general
             instance = context.Request.Path.Value,
             errorCode = ex.ErrorCode,
-            errorMessage = ex.Message,
+            errorMessage = ex.Message, // Mensaje dinámico puntual de la excepción
             correlationId
         }, cancellationToken);
 
@@ -39,12 +40,32 @@ public class BusinessRuleExceptionHandler(ILogger<BusinessRuleExceptionHandler> 
     {
         if (exception is not BusinessRuleException ex) return false;
 
-        var (status, type, title) = ex.ErrorCode switch
+        var (status, type, title, genericDetail) = ex.ErrorCode switch
         {
-            OrderErrorCodes.Ord002 => (StatusCodes.Status400BadRequest, "https://tools.ietf.org/html/rfc7231#section-6.5.1", "Bad Request"),
-            OrderErrorCodes.Ord005 => (StatusCodes.Status422UnprocessableEntity, "https://tools.ietf.org/html/rfc4918#section-11.2", "Unprocessable Entity"),
-            OrderErrorCodes.Ord006 => (StatusCodes.Status409Conflict, "https://tools.ietf.org/html/rfc7231#section-6.5.9", "Conflict"),
-            _ => (StatusCodes.Status400BadRequest, "https://tools.ietf.org/html/rfc7231#section-6.5.1", "Bad Request")
+            OrderErrorCodes.Ord002 => (
+                StatusCodes.Status400BadRequest,
+                "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                "Bad Request",
+                "Los datos de la orden son inválidos."
+            ),
+            OrderErrorCodes.Ord005 => (
+                StatusCodes.Status422UnprocessableEntity,
+                "https://tools.ietf.org/html/rfc4918#section-11.2",
+                "Unprocessable Entity",
+                "No se puede procesar la solicitud." // Exactamente el detail del ejemplo de la consigna
+            ),
+            OrderErrorCodes.Ord006 => (
+                StatusCodes.Status409Conflict,
+                "https://tools.ietf.org/html/rfc7231#section-6.5.9",
+                "Conflict",
+                "El estado actual de la orden no permite realizar la operación solicitada."
+            ),
+            _ => (
+                StatusCodes.Status400BadRequest,
+                "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                "Bad Request",
+                "No se puede procesar la solicitud."
+            )
         };
 
         var correlationId = context.Response.Headers["X-Correlation-Id"].FirstOrDefault()
@@ -60,10 +81,10 @@ public class BusinessRuleExceptionHandler(ILogger<BusinessRuleExceptionHandler> 
             type,
             title,
             status,
-            detail = ex.Message,
+            detail = genericDetail, // Frase general del ejemplo
             instance = context.Request.Path.Value,
             errorCode = ex.ErrorCode,
-            errorMessage = ex.Message,
+            errorMessage = ex.Message, // Mensaje específico dinámico de la regla
             correlationId
         }, cancellationToken);
 
@@ -79,6 +100,28 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             ?? context.Request.Headers["X-Correlation-Id"].FirstOrDefault()
             ?? string.Empty;
 
+        // Errores de binding o JSON malformado
+        if (exception is BadHttpRequestException or JsonException)
+        {
+            logger.LogWarning("Cuerpo de solicitud HTTP inválido en {Path}: {Message}", context.Request.Path, exception.Message);
+
+            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                type = "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+                title = "Bad Request",
+                status = StatusCodes.Status400BadRequest,
+                detail = "Los datos del cuerpo de la solicitud son inválidos o tienen formato incorrecto.",
+                instance = context.Request.Path.Value,
+                errorCode = OrderErrorCodes.Ord002,
+                errorMessage = "Los datos de la orden son inválidos.",
+                correlationId
+            }, cancellationToken);
+
+            return true;
+        }
+
+        // Error interno no controlado (500)
         logger.LogError(exception, "Error no controlado procesando {Path} [CorrelationId: {CorrelationId}]",
             context.Request.Path, correlationId);
 

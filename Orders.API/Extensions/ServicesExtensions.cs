@@ -1,9 +1,12 @@
 ﻿using System.Reflection;
 using Dapper;
+using Microsoft.OpenApi.Models;
 using Orders.API.Clients;
 using Orders.API.Data;
+using Orders.API.DTOs;
 using Orders.API.ExceptionHandlers;
 using Orders.API.HealthChecks;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Orders.API.Extensions;
 
@@ -40,6 +43,12 @@ public static class ServicesExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
+            // Vincula los códigos del catálogo en la tabla de respuestas
+            options.OperationFilter<OrderOpenApiFilter>();
+
+            // Garantiza que el contrato ErrorResponse figure visible en la sección Schemas al pie
+            options.DocumentFilter<ErrorResponseSchemaFilter>();
+
             var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             if (File.Exists(xmlPath))
@@ -48,9 +57,16 @@ public static class ServicesExtensions
             }
         });
 
-        // Health Checks con tags 'ready' y 'live' requeridos
         services.AddHealthChecks()
             .AddCheck<SqliteHealthCheck>("sqlite-db", tags: ["ready", "database"])
             .AddCheck<ApiStatusCheck>("api-status", tags: ["live", "api"]);
+    }
+}
+
+public class ErrorResponseSchemaFilter : IDocumentFilter
+{
+    public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
+    {
+        context.SchemaGenerator.GenerateSchema(typeof(ErrorResponse), context.SchemaRepository);
     }
 }
