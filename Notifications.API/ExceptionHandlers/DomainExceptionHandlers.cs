@@ -23,7 +23,7 @@ public sealed class NotificationExceptionHandler(ILogger<NotificationExceptionHa
                  "Bad Request",
                  "https://tools.ietf.org/html/rfc7231#section-6.5.1",
                  ex.ErrorCode,
-                 "Los datos de la notificación son inválidos o no cumplen las reglas de negocio."),
+                 "Los datos de la notificación son inválidos o tienen formato incorrecto."),
 
             _ => (0, string.Empty, string.Empty, string.Empty, string.Empty)
         };
