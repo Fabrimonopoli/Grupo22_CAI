@@ -27,10 +27,8 @@ public class NotificationOpenApiFilter : IOperationFilter
         }
         else if (method == "GET")
         {
-            if (operation.Responses.TryGetValue("400", out var r400))
-                r400.Description = "Bad Request (NTF-002)";
             if (operation.Responses.TryGetValue("404", out var r404))
-                r404.Description = "Not Found (NTF-001 / NTF-003)";
+                r404.Description = "Not Found (NTF-003)";
         }
     }
 }

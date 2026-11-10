@@ -106,7 +106,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
                 detail = "Los datos del cuerpo de la solicitud son inválidos o tienen formato incorrecto.",
                 instance = context.Request.Path.Value,
                 errorCode = CartErrorCodes.Crt004,
-                errorMessage = "Cantidad o datos de carrito inválidos.",
+                errorMessage = "Cantidad inválida.",
                 correlationId
             }, cancellationToken);
 
