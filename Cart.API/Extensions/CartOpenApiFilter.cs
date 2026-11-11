@@ -28,7 +28,7 @@ public class CartOpenApiFilter : IOperationFilter
             if (operation.Responses.TryGetValue("400", out var r400))
                 r400.Description = "Bad Request (CRT-004)";
             if (operation.Responses.TryGetValue("404", out var r404))
-                r404.Description = "Not Found (CRT-001 / CRT-002)";
+                r404.Description = "Not Found (CRT-002)";
             if (operation.Responses.TryGetValue("422", out var r422))
                 r422.Description = "Unprocessable Entity (CRT-003)";
         }
